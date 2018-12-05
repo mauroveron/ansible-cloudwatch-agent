@@ -1,0 +1,50 @@
+---
+- name: check if agent is already installed
+  stat:
+    path: /opt/aws/amazon-cloudwatch-agent
+  register: installed
+
+- block:
+  - name: setup temp directory for install
+    file:
+      path: /tmp/aws-cw-agent
+      state: directory
+
+  - name: download installer
+    get_url:
+      url: https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+      dest: /tmp/aws-cw-agent/cw-agent.deb
+
+  - name: install agent
+    shell: dpkg -i -E /tmp/aws-cw-agent/cw-agent.deb
+      
+  - name: setup agent region
+    blockinfile:
+       path: /root/.aws/config
+       create: true
+       owner: root
+       group: root
+       mode: 0600
+       marker: "# {mark} ansible aws-cloudwatch-agent config"
+       block: |
+        [AmazonCloudWatchAgent]
+        region = {{ aws_cw_region }}
+    notify: restart-cw-agent
+  
+  - name: remove temp dir
+    file:
+      path: /tmp/aws-cw-agent
+      state: absent
+
+  - name: deploy agent configuration
+    template:
+      src: templates/agent-config.json.j2
+      dest: /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+      mode: 0644
+    notify: restart-cw-agent
+  
+  - name: start agent
+    shell: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -m ec2 -a start
+
+  # when: (installed.stat.exists != true)
+  become: true

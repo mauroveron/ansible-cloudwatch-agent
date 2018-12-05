@@ -1,0 +1,6 @@
+---
+- name: restart-cw-agent
+  service:
+    name: amazon-cloudwatch-agent
+    state: restarted
+    sleep: 13
