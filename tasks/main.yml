@@ -36,15 +36,34 @@
       path: /tmp/aws-cw-agent
       state: absent
 
+  when: (installed.stat.exists != true)
+  become: true
+
+
+- block:
+
+  - name: remove existing configuration
+    file:
+      path: "{{aws_cw_root}}/etc/amazon-cloudwatch-agent.toml"
+      state: absent
+
   - name: deploy agent configuration
     template:
       src: templates/agent-config.json.j2
-      dest: /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+      dest: "{{aws_cw_root}}/etc/amazon-cloudwatch-agent.json"
       mode: 0644
+    tags:
+      - config
     notify: restart-cw-agent
-  
-  - name: start agent
-    shell: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -m ec2 -a start
 
-  # when: (installed.stat.exists != true)
+  - name: start cloudwatch agent
+    shell: |
+      ./amazon-cloudwatch-agent-ctl \
+          -a fetch-config \
+          -m ec2 \
+          -c file:{{aws_cw_root}}/etc/amazon-cloudwatch-agent.json \
+          -s
+    args:
+      chdir: "{{aws_cw_root}}/bin"
+
   become: true

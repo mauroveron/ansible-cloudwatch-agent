@@ -1,6 +1,12 @@
 ---
+
 - name: restart-cw-agent
-  service:
-    name: amazon-cloudwatch-agent
-    state: restarted
-    sleep: 13
+  shell: |
+    ./amazon-cloudwatch-agent-ctl \
+        -a fetch-config \
+        -m ec2 \
+        -c file:{{aws_cw_root}}/etc/amazon-cloudwatch-agent.json \
+        -s
+  args:
+    chdir: "{{aws_cw_root}}/bin"
+  become: true

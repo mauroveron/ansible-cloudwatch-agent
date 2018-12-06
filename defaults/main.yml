@@ -1,2 +1,3 @@
 ---
 aws_cw_region: ap-southeast-2
+aws_cw_root: /opt/aws/amazon-cloudwatch-agent
